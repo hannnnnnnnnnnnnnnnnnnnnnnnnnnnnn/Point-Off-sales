@@ -16,10 +16,9 @@
     </head>
     <body class="font-sans bg-[#D4F7E6]"> <!-- Soft Muda Hijau -->
         <div class="min-h-screen flex flex-col sm:justify-center items-center pt-6 sm:pt-0">
-            <div class="mb-8">
-                <a href="/">
-                    {{-- <x-application-logo class="w-24 h-24 fill-current text-[#6ACD86]" /> <!-- Hijau lebih soft --> --}}
-                </a>
+               <!-- Logo -->
+            <div class="flex justify-center mb-3 ">
+                <img src="{{ asset('img/1.png') }}" alt="Point of Sales Logo" class="w-28 h-auto">
             </div>
 
             <div class="w-full sm:max-w-md mt-3 px-6 py-8 bg-[#E6F9EB] rounded-2xl border border-[#6ACD86]"> <!-- Hijau muda dan border lebih lembut -->
