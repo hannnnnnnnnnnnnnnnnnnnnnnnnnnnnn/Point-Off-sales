@@ -1,138 +1,116 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Transaksi Penjualan</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
-<body>
-<div class="container mt-4">
-    <h2>Transaksi Penjualan</h2>
+@extends('layouts.app')
 
-    <h3>Daftar Produk</h3>
+@section('content')
+<div class="container mx-auto mt-8">
+    <h2 class="text-4xl font-bold text-center text-blue-700 mb-8">Transaksi Penjualan</h2>
 
-    <a href="{{ route('welcome') }}" class="btn btn-secondary m-3">Kembali ke Halaman Utama</a>
-    <div class="row">
-        @foreach($products as $product)
-        <div class="col-md-4">
-            <div class="card mb-3">
-                <div class="card-body">
-                    <h5 class="card-title">{{ $product->name }}</h5>
-                    <p class="card-text">Stok: {{ $product->stock }}</p>
-                    <p class="card-text">Harga: Rp {{ number_format($product->price, 0, ',', '.') }}</p>
-                    <button class="btn btn-primary add-to-transaction" 
-                        data-bs-toggle="modal" 
-                        data-bs-target="#confirmModal" 
-                        data-product-id="{{ $product->id }}" 
-                        data-product-name="{{ $product->name }}" 
-                        data-product-price="{{ $product->price }}" 
-                        data-product-stock="{{ $product->stock }}">
-                        Tambah ke Transaksi
-                    </button>
-                </div>
-            </div>
+    <!-- Tombol Kembali -->
+    <div class="mb-6">
+        <a href="{{ route('welcome') }}" class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-all shadow-md">
+            ⬅ Kembali ke Pengelolaan Barang
+        </a>
+    </div>
+
+    <!-- Daftar Produk dalam Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        @foreach ($products as $product)
+        <div class="bg-white shadow-lg rounded-lg p-6 hover:shadow-2xl transition-all">
+            <h3 class="text-2xl font-semibold mb-2">{{ $product->name }}</h3>
+            <p class="text-gray-600">Stok: <span id="stok{{ $product->id }}" class="font-bold">{{ $product->stock }}</span></p>
+            <p class="text-gray-600">Harga: <span class="text-green-600 font-semibold">Rp {{ number_format($product->price, 0, ',', '.') }}</span></p>
+            
+            <input type="number" name="quantity" id="quantity{{ $product->id }}"
+                class="form-input border border-gray-300 px-3 py-2 rounded-md w-full mt-3 text-center focus:ring-2 focus:ring-blue-400"
+                data-harga="{{ $product->price }}" data-stok="{{ $product->stock }}"
+                data-target="total{{ $product->id }}" min="1" max="{{ $product->stock }}"
+                placeholder="Masukkan jumlah">
+
+            <p class="mt-3 font-semibold">Total Harga: <span id="total{{ $product->id }}" class="text-blue-600">Rp 0,00</span></p>
+
+            <button class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 w-full mt-4 transition-all shadow-md add-to-transaction" 
+                data-product-id="{{ $product->id }}">
+                + Tambah ke Transaksi
+            </button>
         </div>
         @endforeach
     </div>
 </div>
 
 <!-- Form untuk transaksi -->
-<form id="transactionForm" action="{{ route('sales.store') }}" method="POST">
+<form id="transactionForm" action="{{ route('sales.store') }}" method="POST" hidden>
     @csrf
-    <input type="hidden" name="isFrontend" value="true"> <!-- Tambahkan isFrontend -->
     <input type="hidden" name="product_id[]" id="hidden-product-id">
     <input type="hidden" name="quantity[]" id="hidden-quantity">
 </form>
 
-<!-- Modal Konfirmasi Transaksi -->
-<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="confirmModalLabel">Konfirmasi Transaksi</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <p><strong>Produk:</strong> <span id="modal-product-name"></span></p>
-                <p><strong>Harga Satuan:</strong> Rp <span id="modal-product-price"></span></p>
-                <p><strong>Stok Tersedia:</strong> <span id="modal-product-stock"></span></p>
-                <label for="modal-quantity">Jumlah:</label>
-                <input type="number" id="modal-quantity" class="form-control" min="1">
-                <p class="mt-2"><strong>Total Harga:</strong> Rp <span id="modal-total"></span></p>
-            </div>
-            <div class="modal-footer">
-                <button type="button" id="confirmTransaction" class="btn btn-primary">Ya, Tambahkan</button>
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-            </div>
-        </div>
-    </div>
-</div>
+<!-- Tambahkan SweetAlert2 -->
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-  <script>
-    $(function() {
-        let selectedProductId, selectedStock, productPrice;
+<!-- Script untuk mengatur total harga dan submit transaksi -->
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('input[name="quantity"]').forEach(input => {
+            input.addEventListener('input', function () {
+                let hargaSatuan = parseFloat(this.dataset.harga);
+                let stokTersedia = parseInt(this.dataset.stok);
+                let jumlah = parseInt(this.value) || 0;
 
-        // Open modal and setup values
-        $('#confirmModal').on('show.bs.modal', function(event) {
-            const button = $(event.relatedTarget);
-            const productName = button.data('product-name');
-            productPrice = button.data('product-price');
-            selectedProductId = button.data('product-id');
-            selectedStock = button.data('product-stock');
+                if (jumlah > stokTersedia) {
+                    this.value = stokTersedia;
+                    jumlah = stokTersedia;
+                }
 
-            $('#modal-product-name').text(productName);
-            $('#modal-product-price').text(new Intl.NumberFormat('id-ID').format(productPrice));
-            $('#modal-product-stock').text(selectedStock);
-            $('#modal-total').text("0");
-            $('#modal-quantity').val('').attr('max', selectedStock);
-        });
-
-        // Update total price on quantity change
-        $('#modal-quantity').on('input', function() {
-            const quantity = Math.min(Math.max($(this).val() || 0, 1), selectedStock);
-            $(this).val(quantity);
-            $('#modal-total').text(new Intl.NumberFormat('id-ID').format(quantity * productPrice));
-        });
-
-        // Handle confirm transaction
-        $('#confirmTransaction').on('click', function() {
-            const quantity = $('#modal-quantity').val();
-
-            if (quantity < 1 || quantity > selectedStock) {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Jumlah Tidak Valid!',
-                    text: 'Jumlah yang dimasukkan melebihi stok atau kurang dari 1.',
-                    confirmButtonText: 'OK',
-                });
-                return;
-            }
-
-            $('#hidden-product-id').val(selectedProductId);
-            $('#hidden-quantity').val(quantity);
-
-            // Tutup modal sebelum submit
-            $('#confirmModal').modal('hide');
-
-            // Tampilkan notifikasi sukses LANGSUNG
-            Swal.fire({
-                icon: 'success',
-                title: 'Produk Ditambahkan!',
-                text: 'Produk berhasil ditambahkan ke transaksi.',
-                showConfirmButton: false,
-                timer: 2000
+                let total = hargaSatuan * jumlah;
+                document.getElementById(this.dataset.target).textContent = "Rp " + total.toLocaleString('id-ID', { minimumFractionDigits: 2 });
             });
+        });
 
-            // Submit form setelah notifikasi muncul
-            setTimeout(() => {
-                $('#transactionForm').submit();
-            }, 1000); 
+        document.querySelectorAll('.add-to-transaction').forEach(button => {
+            button.addEventListener('click', function () {
+                let productId = this.dataset.productId;
+                let quantityInput = document.getElementById("quantity" + productId);
+                let quantity = parseInt(quantityInput.value) || 0;
+                let maxStock = parseInt(quantityInput.dataset.stok);
+
+                if (quantity < 1 || quantity > maxStock) {
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Jumlah Tidak Valid!',
+                        text: 'Jumlah yang dimasukkan melebihi stok atau kurang dari 1.',
+                        confirmButtonText: 'OK',
+                    });
+                    return;
+                }
+
+                Swal.fire({
+                    title: 'Konfirmasi Transaksi',
+                    text: 'Apakah Anda yakin ingin menambahkan produk ini ke transaksi?',
+                    icon: 'question',
+                    showCancelButton: true,
+                    confirmButtonColor: '#3085d6',
+                    cancelButtonColor: '#d33',
+                    confirmButtonText: 'Ya, Tambahkan!',
+                    cancelButtonText: 'Batal'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        document.getElementById('hidden-product-id').value = productId;
+                        document.getElementById('hidden-quantity').value = quantity;
+                        
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Produk Ditambahkan!',
+                            text: 'Produk berhasil ditambahkan ke transaksi.',
+                            showConfirmButton: false,
+                            timer: 1500
+                        });
+
+                        setTimeout(() => {
+                            document.getElementById('transactionForm').submit();
+                        }, 1000);
+                    }
+                });
+            });
         });
     });
 </script>
-</body>
-</html>
+@endsection

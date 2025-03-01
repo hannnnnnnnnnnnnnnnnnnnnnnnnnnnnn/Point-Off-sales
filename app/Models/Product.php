@@ -25,9 +25,11 @@ class Product extends Model
       public function decreaseStock($quantity)
       {
           if ($this->stock >= $quantity) {
-              $this->decrement('stock', $quantity);
+              return $this->decrement('stock', $quantity);
           }
+          return false;
       }
+      
       
   
       // Method untuk menambah stok produk

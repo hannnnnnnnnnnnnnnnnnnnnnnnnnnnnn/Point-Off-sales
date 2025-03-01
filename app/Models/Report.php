@@ -13,5 +13,11 @@ class Report extends Model
 
     // Menambahkan ini agar timestamps otomatis
     public $timestamps = true; // Pastikan ini diset true
+
+    public function transactions()
+{
+    return $this->hasMany(Transaction::class, 'tanggal', 'created_at');
+}
+
 }
 

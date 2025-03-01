@@ -33,20 +33,18 @@ class SalesController extends Controller
             'quantity' => 'required|array',
             'quantity.*' => 'integer|min:1'
         ]);
-
+    
         DB::beginTransaction();
         try {
             foreach ($request->product_id as $index => $product_id) {
                 $quantity = $request->quantity[$index];
                 $product = Product::findOrFail($product_id);
-
-                // Cek stok sebelum melakukan transaksi
+    
                 if ($product->stock < $quantity) {
                     DB::rollBack();
                     return redirect()->back()->with('error', "Stok tidak mencukupi untuk {$product->name}");
                 }
-
-                // Simpan transaksi
+    
                 $transaction = Transaction::create([
                     'product_id' => $product->id,
                     'quantity' => $quantity,
@@ -55,34 +53,31 @@ class SalesController extends Controller
                     'date' => now()->format('Y-m-d'),
                     'day' => now()->day,
                 ]);
-
-                // Debugging untuk cek apakah transaksi berhasil dibuat
+    
                 if (!$transaction) {
                     DB::rollBack();
                     return redirect()->back()->with('error', "Gagal menyimpan transaksi untuk {$product->name}");
                 }
-
-                // Kurangi stok barang dengan cara yang lebih aman
+    
                 $product->stock -= $quantity;
-                $product->save(); // Simpan perubahan stok
-
-                // Debugging stok (hapus jika sudah tidak diperlukan)
-                // dd($product->stock, $quantity);
+                $product->save();
             }
-
+    
             DB::commit();
-
-            $isFrontend = $request->input('isFrontend', false);
-
+    
+            // Cek apakah transaksi berasal dari frontend
+            $isFrontend = str_contains(url()->previous(), 'frontend');
+    
             if ($isFrontend) {
                 return redirect()->route('frontend.sale')->with('success', 'Transaksi berhasil! Barang telah diproses.');
             } else {
                 return redirect()->route('sales.index')->with('success', 'Transaksi berhasil! Barang telah diproses.');
             }
-
+    
         } catch (\Exception $e) {
             DB::rollBack();
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+    
 }

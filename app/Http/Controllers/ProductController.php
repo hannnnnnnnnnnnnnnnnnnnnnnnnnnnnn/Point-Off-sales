@@ -7,16 +7,18 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function showFrontPage()
+    public function showFrontPage(Request $request)
     {
-        $products = Product::all();
-        return view('frontend.product', compact('products'));
+        $query = $request->input('search');
+        $products = Product::where('name', 'like', "%{$query}%")->get();
+        return view('frontend.product', compact('products', 'query'));
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $products = Product::all();
-        return view('products.index', compact('products'));
+        $query = $request->input('search');
+        $products = Product::where('name', 'like', "%{$query}%")->get();
+        return view('products.index', compact('products', 'query'));
     }
 
     public function create()
